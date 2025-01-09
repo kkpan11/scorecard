@@ -21,12 +21,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ossf/scorecard/v4/checker"
-	"github.com/ossf/scorecard/v4/checks"
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/clients/githubrepo"
-	"github.com/ossf/scorecard/v4/clients/localdir"
-	scut "github.com/ossf/scorecard/v4/utests"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/checks"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/clients/githubrepo"
+	"github.com/ossf/scorecard/v5/clients/localdir"
+	scut "github.com/ossf/scorecard/v5/utests"
 )
 
 // TODO: use dedicated repo that don't change.
@@ -49,13 +49,13 @@ var _ = Describe("E2E TEST:"+checks.CheckPinnedDependencies, func() {
 			}
 			expected := scut.TestReturn{
 				Error:         nil,
-				Score:         1,
+				Score:         2,
 				NumberOfWarn:  139,
-				NumberOfInfo:  1,
+				NumberOfInfo:  5,
 				NumberOfDebug: 0,
 			}
 			result := checks.PinningDependencies(&req)
-			Expect(scut.ValidateTestReturn(nil, "dependencies check", &expected, &result, &dl)).Should(BeTrue())
+			scut.ValidateTestReturn(GinkgoTB(), "dependencies check", &expected, &result, &dl)
 			Expect(repoClient.Close()).Should(BeNil())
 		})
 		It("Should return dependencies check at commit", func() {
@@ -74,13 +74,13 @@ var _ = Describe("E2E TEST:"+checks.CheckPinnedDependencies, func() {
 			}
 			expected := scut.TestReturn{
 				Error:         nil,
-				Score:         1,
+				Score:         2,
 				NumberOfWarn:  139,
-				NumberOfInfo:  1,
+				NumberOfInfo:  5,
 				NumberOfDebug: 0,
 			}
 			result := checks.PinningDependencies(&req)
-			Expect(scut.ValidateTestReturn(nil, "dependencies check", &expected, &result, &dl)).Should(BeTrue())
+			scut.ValidateTestReturn(GinkgoTB(), "dependencies check", &expected, &result, &dl)
 			Expect(repoClient.Close()).Should(BeNil())
 		})
 		It("Should return dependencies check for a local repoClient", func() {
@@ -110,13 +110,13 @@ var _ = Describe("E2E TEST:"+checks.CheckPinnedDependencies, func() {
 			}
 			expected := scut.TestReturn{
 				Error:         nil,
-				Score:         1,
+				Score:         2,
 				NumberOfWarn:  139,
-				NumberOfInfo:  1,
+				NumberOfInfo:  5,
 				NumberOfDebug: 0,
 			}
 			result := checks.PinningDependencies(&req)
-			Expect(scut.ValidateTestReturn(nil, "dependencies check", &expected, &result, &dl)).Should(BeTrue())
+			scut.ValidateTestReturn(GinkgoTB(), "dependencies check", &expected, &result, &dl)
 			Expect(x.Close()).Should(BeNil())
 		})
 	})

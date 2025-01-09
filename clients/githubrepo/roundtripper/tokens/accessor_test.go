@@ -16,11 +16,12 @@ package tokens
 import (
 	"net/http/httptest"
 	"net/rpc"
+	"os"
 	"strings"
 	"testing"
 )
 
-//nolint:paralleltest
+//nolint:paralleltest // test uses t.Setenv indirectly
 func TestMakeTokenAccessor(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -40,16 +41,14 @@ func TestMakeTokenAccessor(t *testing.T) {
 			useServer: true,
 		},
 	}
-	t.Setenv("GITHUB_AUTH_TOKEN", "")
-	t.Setenv("GITHUB_TOKEN", "")
+	unsetTokens(t)
+	t.Setenv(githubAuthServer, "")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			switch {
 			case tt.useGitHubToken:
-				t.Helper()
 				testToken(t)
 			case tt.useServer:
-				t.Helper()
 				testServer(t)
 			default:
 				got := MakeTokenAccessor()
@@ -84,8 +83,6 @@ func testServer(t *testing.T) {
 	serverURL := strings.TrimPrefix(server.URL, "http://")
 	t.Setenv("GITHUB_AUTH_SERVER", serverURL)
 	t.Cleanup(server.Close)
-	myRPCService := &MyRPCService{}
-	rpc.Register(myRPCService) //nolint:errcheck
 	rpc.HandleHTTP()
 	got := MakeTokenAccessor()
 	if got == nil {
@@ -93,6 +90,92 @@ func testServer(t *testing.T) {
 	}
 }
 
-type MyRPCService struct {
-	// Define your RPC service methods here
+func TestClashingTokensDisplayWarning(t *testing.T) {
+	unsetTokens(t)
+
+	someToken := "test_token"
+	otherToken := "clashing_token"
+	t.Setenv("GITHUB_AUTH_TOKEN", someToken)
+	t.Setenv("GITHUB_TOKEN", otherToken)
+
+	warningCalled := false
+	originalLogWarning := logDuplicateTokenWarning
+	logDuplicateTokenWarning = func(firstName string, clashingName string) {
+		warningCalled = true
+	}
+	defer func() { logDuplicateTokenWarning = originalLogWarning }()
+
+	token, exists := readGitHubTokens()
+
+	if token != someToken {
+		t.Errorf("Received wrong token")
+	}
+	if !exists {
+		t.Errorf("Token is expected to exist")
+	}
+	if !warningCalled {
+		t.Errorf("Expected logWarning to be called for clashing tokens, but it was not.")
+	}
+}
+
+func TestConsistentTokensDoNotDisplayWarning(t *testing.T) {
+	unsetTokens(t)
+
+	someToken := "test_token"
+	t.Setenv("GITHUB_AUTH_TOKEN", someToken)
+	t.Setenv("GITHUB_TOKEN", someToken)
+
+	warningCalled := false
+	originalLogWarning := logDuplicateTokenWarning
+	logDuplicateTokenWarning = func(firstName string, clashingName string) {
+		warningCalled = true
+	}
+	defer func() { logDuplicateTokenWarning = originalLogWarning }()
+
+	token, exists := readGitHubTokens()
+
+	if token != someToken {
+		t.Errorf("Received wrong token")
+	}
+	if !exists {
+		t.Errorf("Token is expected to exist")
+	}
+	if warningCalled {
+		t.Errorf("Expected logWarning to not have been called for consistent tokens, but it was.")
+	}
+}
+
+//nolint:paralleltest // test uses t.Setenv indirectly
+func TestNoTokensDoNoDisplayWarning(t *testing.T) {
+	unsetTokens(t)
+
+	warningCalled := false
+	originalLogWarning := logDuplicateTokenWarning
+	logDuplicateTokenWarning = func(firstName string, clashingName string) {
+		warningCalled = true
+	}
+	defer func() { logDuplicateTokenWarning = originalLogWarning }()
+
+	token, exists := readGitHubTokens()
+
+	if token != "" {
+		t.Errorf("Scorecard found a token somewhere")
+	}
+	if exists {
+		t.Errorf("Token is not expected to exist")
+	}
+	if warningCalled {
+		t.Errorf("Expected logWarning to not have been called for no set tokens, but it was not.")
+	}
+}
+
+// temporarily unset all of the github token env vars,
+// as tests may otherwise fail depending on the local environment.
+func unsetTokens(t *testing.T) {
+	t.Helper()
+	for _, name := range githubAuthTokenEnvVars {
+		// equivalent to t.Unsetenv (which does not exist)
+		t.Setenv(name, "")
+		os.Unsetenv(name)
+	}
 }

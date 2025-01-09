@@ -18,33 +18,35 @@ package options
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/caarlos0/env/v6"
 
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/log"
+	"github.com/ossf/scorecard/v5/clients"
+	sclog "github.com/ossf/scorecard/v5/log"
 )
 
 // Options define common options for configuring scorecard.
 type Options struct {
-	Repo       string
-	Local      string
-	Commit     string
-	LogLevel   string
-	Format     string
-	NPM        string
-	PyPI       string
-	RubyGems   string
-	Nuget      string
-	PolicyFile string
-	// TODO(action): Add logic for writing results to file
-	ResultsFile string
-	ChecksToRun []string
-	Metadata    []string
-	CommitDepth int
-	ShowDetails bool
+	Repo            string
+	Local           string
+	Commit          string
+	LogLevel        string
+	Format          string
+	NPM             string
+	PyPI            string
+	RubyGems        string
+	Nuget           string
+	PolicyFile      string
+	ResultsFile     string
+	ChecksToRun     []string
+	ProbesToRun     []string
+	Metadata        []string
+	CommitDepth     int
+	ShowDetails     bool
+	ShowAnnotations bool
 	// Feature flags.
 	EnableSarif                 bool `env:"ENABLE_SARIF"`
 	EnableScorecardV6           bool `env:"SCORECARD_V6"`
@@ -55,7 +57,7 @@ type Options struct {
 func New() *Options {
 	opts := &Options{}
 	if err := env.Parse(opts); err != nil {
-		fmt.Printf("could not parse env vars, using default options: %v", err)
+		log.Printf("could not parse env vars, using default options: %v", err)
 	}
 	// Defaulting.
 	// TODO(options): Consider moving this to a separate function/method.
@@ -78,13 +80,8 @@ const (
 	// Formats.
 	// FormatJSON specifies that results should be output in JSON format.
 	FormatJSON = "json"
-	// FormatFJSON specifies that results should be output in JSON format,
-	// but with structured findings.
-	FormatFJSON = "finding"
-	// FormatPJSON specifies that results should be output in probe JSON format.
-	FormatPJSON = "probe"
-	// FormatSJSON specifies that results should be output in structured JSON format.
-	FormatSJSON = "structured"
+	// FormatProbe specifies that results should be output in probe JSON format.
+	FormatProbe = "probe"
 	// FormatSarif specifies that results should be output in SARIF format.
 	FormatSarif = "sarif"
 	// FormatDefault specifies that results should be output in default format.
@@ -106,14 +103,13 @@ const (
 
 var (
 	// DefaultLogLevel retrieves the default log level.
-	DefaultLogLevel = log.DefaultLevel.String()
+	DefaultLogLevel = sclog.DefaultLevel.String()
 
-	errCommitIsEmpty                   = errors.New("commit should be non-empty")
-	errFormatNotSupported              = errors.New("unsupported format")
-	errFormatSupportedWithExperimental = errors.New("format supported only with SCORECARD_EXPERIMENTAL=1")
-	errPolicyFileNotSupported          = errors.New("policy file is not supported yet")
-	errRawOptionNotSupported           = errors.New("raw option is not supported yet")
-	errRepoOptionMustBeSet             = errors.New(
+	errCommitIsEmpty          = errors.New("commit should be non-empty")
+	errFormatNotSupported     = errors.New("unsupported format")
+	errPolicyFileNotSupported = errors.New("policy file is not supported yet")
+	errRawOptionNotSupported  = errors.New("raw option is not supported yet")
+	errRepoOptionMustBeSet    = errors.New(
 		"exactly one of `repo`, `npm`, `pypi`, `rubygems`, `nuget` or `local` must be set",
 	)
 	errSARIFNotSupported = errors.New("SARIF format is not supported yet")
@@ -160,17 +156,6 @@ func (o *Options) Validate() error {
 			errs = append(
 				errs,
 				errRawOptionNotSupported,
-			)
-		}
-	}
-
-	if !o.isExperimentalEnabled() {
-		if o.Format == FormatSJSON ||
-			o.Format == FormatFJSON ||
-			o.Format == FormatPJSON {
-			errs = append(
-				errs,
-				errFormatSupportedWithExperimental,
 			)
 		}
 	}
@@ -240,11 +225,8 @@ func (o *Options) Checks() []string {
 	return o.ChecksToRun
 }
 
-// isExperimentalEnabled returns true if experimental features were enabled via
-// environment variable.
-func (o *Options) isExperimentalEnabled() bool {
-	value, _ := os.LookupEnv(EnvVarScorecardExperimental)
-	return value == "1"
+func (o *Options) Probes() []string {
+	return o.ProbesToRun
 }
 
 // isSarifEnabled returns true if SARIF format was specified in options or via
@@ -264,8 +246,7 @@ func (o *Options) isV6Enabled() bool {
 
 func validateFormat(format string) bool {
 	switch format {
-	case FormatJSON, FormatSJSON, FormatFJSON,
-		FormatPJSON, FormatSarif, FormatDefault, FormatRaw:
+	case FormatJSON, FormatProbe, FormatSarif, FormatDefault, FormatRaw:
 		return true
 	default:
 		return false
