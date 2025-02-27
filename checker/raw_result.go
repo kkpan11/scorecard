@@ -15,35 +15,39 @@
 package checker
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/finding"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/finding"
 )
 
 // RawResults contains results before a policy
 // is applied.
-// nolint
+//
+//nolint:govet
 type RawResults struct {
-	PackagingResults            PackagingData
-	CIIBestPracticesResults     CIIBestPracticesData
-	DangerousWorkflowResults    DangerousWorkflowData
-	VulnerabilitiesResults      VulnerabilitiesData
 	BinaryArtifactResults       BinaryArtifactData
-	SecurityPolicyResults       SecurityPolicyData
-	DependencyUpdateToolResults DependencyUpdateToolData
 	BranchProtectionResults     BranchProtectionsData
+	CIIBestPracticesResults     CIIBestPracticesData
+	CITestResults               CITestData
 	CodeReviewResults           CodeReviewData
-	PinningDependenciesResults  PinningDependenciesData
-	WebhookResults              WebhooksData
 	ContributorsResults         ContributorsData
-	MaintainedResults           MaintainedData
-	SignedReleasesResults       SignedReleasesData
+	DangerousWorkflowResults    DangerousWorkflowData
+	DependencyUpdateToolResults DependencyUpdateToolData
 	FuzzingResults              FuzzingData
 	LicenseResults              LicenseData
-	TokenPermissionsResults     TokenPermissionsData
-	CITestResults               CITestData
+	SBOMResults                 SBOMData
+	MaintainedResults           MaintainedData
 	Metadata                    MetadataData
+	PackagingResults            PackagingData
+	PinningDependenciesResults  PinningDependenciesData
+	SASTResults                 SASTData
+	SecurityPolicyResults       SecurityPolicyData
+	SignedReleasesResults       SignedReleasesData
+	TokenPermissionsResults     TokenPermissionsData
+	VulnerabilitiesResults      VulnerabilitiesData
+	WebhookResults              WebhooksData
 }
 
 type MetadataData struct {
@@ -74,7 +78,6 @@ type PackagingData struct {
 }
 
 // Package represents a package.
-// nolint
 type Package struct {
 	// TODO: not supported yet. This needs to be unique across
 	// ecosystems: purl, OSV, CPE, etc.
@@ -84,6 +87,17 @@ type Package struct {
 	// Note: Msg is populated only for debug messages.
 	Msg  *string
 	Runs []Run
+}
+
+type PackageProvenance struct {
+	Commit     string
+	IsVerified bool
+}
+type ProjectPackage struct {
+	System     string
+	Name       string
+	Version    string
+	Provenance PackageProvenance
 }
 
 // DependencyUseType represents a type of dependency use.
@@ -110,18 +124,21 @@ const (
 
 // PinningDependenciesData represents pinned dependency data.
 type PinningDependenciesData struct {
-	Dependencies []Dependency
+	Dependencies     []Dependency
+	ProcessingErrors []ElementError // jobs or files with errors may have incomplete results
 }
 
 // Dependency represents a dependency.
 type Dependency struct {
 	// TODO: unique dependency name.
 	// TODO: Job         *WorkflowJob
-	Name     *string
-	PinnedAt *string
-	Location *File
-	Msg      *string // Only for debug messages.
-	Type     DependencyUseType
+	Name        *string
+	PinnedAt    *string
+	Location    *File
+	Msg         *string // Only for debug messages.
+	Pinned      *bool
+	Remediation *finding.Remediation
+	Type        DependencyUseType
 }
 
 // MaintainedData contains the raw results
@@ -161,6 +178,18 @@ type LicenseFile struct {
 // Some repos may have more than one license.
 type LicenseData struct {
 	LicenseFiles []LicenseFile
+}
+
+// SBOM details.
+type SBOM struct {
+	Name string // SBOM Filename
+	File File   // SBOM File Object
+}
+
+// SBOMData contains the raw results for the SBOM check.
+// Some repos may have more than one SBOM.
+type SBOMData struct {
+	SBOMFiles []SBOM
 }
 
 // CodeReviewData contains the raw results
@@ -225,6 +254,46 @@ type SecurityPolicyFile struct {
 	File File
 }
 
+// SASTData contains the raw results
+// for the SAST check.
+type SASTData struct {
+	Workflows    []SASTWorkflow
+	Commits      []SASTCommit
+	NumWorkflows int
+}
+
+type SASTCommit struct {
+	CommittedDate          time.Time
+	Message                string
+	SHA                    string
+	CheckRuns              []clients.CheckRun
+	AssociatedMergeRequest clients.PullRequest
+	Committer              clients.User
+	Compliant              bool
+}
+
+// SASTWorkflowType represents a type of SAST workflow.
+type SASTWorkflowType string
+
+const (
+	// CodeQLWorkflow represents a workflow that runs CodeQL.
+	CodeQLWorkflow SASTWorkflowType = "CodeQL"
+	// SonarWorkflow represents a workflow that runs Sonar.
+	SonarWorkflow SASTWorkflowType = "Sonar"
+	// SnykWorkflow represents a workflow that runs Snyk.
+	SnykWorkflow SASTWorkflowType = "Snyk"
+	// PysaWorkflow represents a workflow that runs Pysa.
+	PysaWorkflow SASTWorkflowType = "Pysa"
+	// QodanaWorkflow represents a workflow that runs Qodana.
+	QodanaWorkflow SASTWorkflowType = "Qodana"
+)
+
+// SASTWorkflow represents a SAST workflow.
+type SASTWorkflow struct {
+	Type SASTWorkflowType
+	File File
+}
+
 // SecurityPolicyData contains the raw results
 // for the Security-Policy check.
 type SecurityPolicyData struct {
@@ -242,6 +311,7 @@ type BinaryArtifactData struct {
 // for the Signed-Releases check.
 type SignedReleasesData struct {
 	Releases []clients.Release
+	Packages []ProjectPackage
 }
 
 // DependencyUpdateToolData contains the raw results
@@ -285,7 +355,7 @@ type Run struct {
 	URL string
 }
 
-// ArchivedStatus definess the archived status.
+// ArchivedStatus defines the archived status.
 type ArchivedStatus struct {
 	Status bool
 	// TODO: add fields, e.g., date of archival.
@@ -302,7 +372,7 @@ type File struct {
 	// TODO: add hash.
 }
 
-// CIIBestPracticesData contains data foor CIIBestPractices check.
+// CIIBestPracticesData contains data for CIIBestPractices check.
 type CIIBestPracticesData struct {
 	Badge clients.BadgeLevel
 }
@@ -400,4 +470,24 @@ func (f *File) Location() *finding.Location {
 	}
 
 	return loc
+}
+
+// ElementError allows us to identify the "element" that led to the given error.
+// The "element" is the specific "code under analysis" that caused the error. It should
+// describe what caused the error as precisely as possible.
+//
+// For example, if a shell parsing error occurs while parsing a Dockerfile `RUN` block
+// or a GitHub workflow's `run:` step, the "element" should point to the Dockerfile
+// lines or workflow job step that caused the failure, not just the file path.
+type ElementError struct {
+	Err      error
+	Location finding.Location
+}
+
+func (e *ElementError) Error() string {
+	return fmt.Sprintf("%s: %v", e.Err, e.Location)
+}
+
+func (e *ElementError) Unwrap() error {
+	return e.Err
 }
