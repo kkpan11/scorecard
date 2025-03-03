@@ -15,14 +15,17 @@
 package github
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 
 	"github.com/rhysd/actionlint"
 
-	"github.com/ossf/scorecard/v4/checker"
-	"github.com/ossf/scorecard/v4/checks/fileparser"
-	"github.com/ossf/scorecard/v4/finding"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/checks/fileparser"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/finding"
 )
 
 // Packaging checks for packages.
@@ -37,9 +40,14 @@ func Packaging(c *checker.CheckRequest) (checker.PackagingData, error) {
 	}
 
 	for _, fp := range matchedFiles {
-		fc, err := c.RepoClient.GetFileContent(fp)
+		fr, err := c.RepoClient.GetFileReader(fp)
 		if err != nil {
-			return data, fmt.Errorf("RepoClient.GetFileContent: %w", err)
+			return data, fmt.Errorf("RepoClient.GetFileReader: %w", err)
+		}
+		fc, err := io.ReadAll(fr)
+		fr.Close()
+		if err != nil {
+			return data, fmt.Errorf("reading file: %w", err)
 		}
 
 		workflow, errs := actionlint.Parse(fc)
@@ -67,7 +75,12 @@ func Packaging(c *checker.CheckRequest) (checker.PackagingData, error) {
 
 		runs, err := c.RepoClient.ListSuccessfulWorkflowRuns(filepath.Base(fp))
 		if err != nil {
-			return data, fmt.Errorf("Client.Actions.ListWorkflowRunsByFileName: %w", err)
+			// assume the workflow will have run for localdir client
+			if errors.Is(err, clients.ErrUnsupportedFeature) {
+				runs = append(runs, clients.WorkflowRun{})
+			} else {
+				return data, fmt.Errorf("Client.Actions.ListWorkflowRunsByFileName: %w", err)
+			}
 		}
 
 		if len(runs) > 0 {

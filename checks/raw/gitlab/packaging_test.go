@@ -15,19 +15,20 @@
 package gitlab
 
 import (
+	"io"
 	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/ossf/scorecard/v4/checker"
-	mockrepo "github.com/ossf/scorecard/v4/clients/mockclients"
+	"github.com/ossf/scorecard/v5/checker"
+	mockrepo "github.com/ossf/scorecard/v5/clients/mockclients"
 )
 
 func TestGitlabPackagingYamlCheck(t *testing.T) {
 	t.Parallel()
 
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name       string
 		lineNumber uint
@@ -100,7 +101,7 @@ func TestGitlabPackagingYamlCheck(t *testing.T) {
 func TestGitlabPackagingPackager(t *testing.T) {
 	t.Parallel()
 
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name       string
 		lineNumber uint
@@ -134,11 +135,9 @@ func TestGitlabPackagingPackager(t *testing.T) {
 			moqRepoClient.EXPECT().ListFiles(gomock.Any()).
 				Return([]string{tt.filename}, nil).AnyTimes()
 
-			moqRepoClient.EXPECT().GetFileContent(tt.filename).
-				DoAndReturn(func(b string) ([]byte, error) {
-					//nolint: errcheck
-					content, _ := os.ReadFile(b)
-					return content, nil
+			moqRepoClient.EXPECT().GetFileReader(tt.filename).
+				DoAndReturn(func(b string) (io.ReadCloser, error) {
+					return os.Open(b)
 				}).AnyTimes()
 
 			if tt.exists {
@@ -150,8 +149,10 @@ func TestGitlabPackagingPackager(t *testing.T) {
 				Repo:       moqRepo,
 			}
 
-			//nolint: errcheck
-			packagingData, _ := Packaging(&req)
+			packagingData, err := Packaging(&req)
+			if err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
 
 			if !tt.exists {
 				if len(packagingData.Packages) != 0 {

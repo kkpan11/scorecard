@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ossf/scorecard/v4/clients"
+	"github.com/ossf/scorecard/v5/clients"
 )
 
 var _ = Describe("E2E TEST: githubrepo.branchesHandler", func() {
@@ -36,7 +36,7 @@ var _ = Describe("E2E TEST: githubrepo.branchesHandler", func() {
 		It("Should not have increased for HEAD query", func() {
 			skipIfTokenIsNot(patTokenType, "PAT only")
 
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: clients.HeadSHA,
@@ -51,7 +51,7 @@ var _ = Describe("E2E TEST: githubrepo.branchesHandler", func() {
 		It("Should fail for non-HEAD query", func() {
 			skipIfTokenIsNot(patTokenType, "PAT only")
 
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: "de5224bbc56eceb7a25aece55d2d53bbc561ed2d",
@@ -66,7 +66,7 @@ var _ = Describe("E2E TEST: githubrepo.branchesHandler", func() {
 		It("Should return the correct default branch", func() {
 			skipIfTokenIsNot(patTokenType, "PAT only")
 
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: clients.HeadSHA,
@@ -83,7 +83,7 @@ var _ = Describe("E2E TEST: githubrepo.branchesHandler", func() {
 		It("Should return a branch", func() {
 			skipIfTokenIsNot(patTokenType, "PAT only")
 
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: clients.HeadSHA,
@@ -95,17 +95,17 @@ var _ = Describe("E2E TEST: githubrepo.branchesHandler", func() {
 			Expect(branchRef).ShouldNot(BeNil())
 		})
 
-		It("Should return an error for non-existent branch", func() {
+		It("Should return an error for nonexistent branch", func() {
 			skipIfTokenIsNot(patTokenType, "PAT only")
 
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: clients.HeadSHA,
 			}
 			brancheshandler.init(context.Background(), repourl)
 
-			branchRef, err := brancheshandler.getBranch("non-existent-branch")
+			branchRef, err := brancheshandler.getBranch("nonexistent-branch")
 			Expect(err).Should(BeNil())
 			Expect(branchRef).Should(BeNil())
 		})
@@ -114,7 +114,7 @@ var _ = Describe("E2E TEST: githubrepo.branchesHandler", func() {
 		It("Should return a branch", func() {
 			skipIfTokenIsNot(patTokenType, "PAT only")
 
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: clients.HeadSHA,
@@ -126,7 +126,7 @@ var _ = Describe("E2E TEST: githubrepo.branchesHandler", func() {
 		It("Should fail for non-HEAD query", func() {
 			skipIfTokenIsNot(patTokenType, "PAT only")
 
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: "de5224bbc56eceb7a25aece55d2d53bbc561ed2d",
