@@ -19,15 +19,14 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/ossf/scorecard/v4/checker"
-	clients "github.com/ossf/scorecard/v4/clients"
-	mockrepo "github.com/ossf/scorecard/v4/clients/mockclients"
+	"github.com/ossf/scorecard/v5/checker"
+	clients "github.com/ossf/scorecard/v5/clients"
+	mockrepo "github.com/ossf/scorecard/v5/clients/mockclients"
 )
 
 func Test_checkDependencyFileExists(t *testing.T) {
 	t.Parallel()
 
-	//nolint
 	tests := []struct {
 		name    string
 		path    string
@@ -65,6 +64,18 @@ func Test_checkDependencyFileExists(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    ".gitlab/renovate.json",
+			path:    ".gitlab/renovate.json",
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    ".gitlab/renovate.json5",
+			path:    ".gitlab/renovate.json5",
+			want:    true,
+			wantErr: false,
+		},
+		{
 			name:    ".renovaterc.json",
 			path:    ".renovaterc.json",
 			want:    true,
@@ -95,15 +106,51 @@ func Test_checkDependencyFileExists(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    ".scala-steward.conf",
+			path:    ".scala-steward.conf",
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    "scala-steward.conf",
+			path:    "scala-steward.conf",
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    ".github/.scala-steward.conf",
+			path:    ".github/.scala-steward.conf",
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    ".github/scala-steward.conf",
+			path:    ".github/scala-steward.conf",
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    ".config/.scala-steward.conf",
+			path:    ".config/.scala-steward.conf",
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    ".config/scala-steward.conf",
+			path:    ".config/scala-steward.conf",
+			want:    true,
+			wantErr: false,
+		},
+		{
 			name:    ".lift.toml",
 			path:    ".lift.toml",
-			want:    true,
+			want:    false, // support removed
 			wantErr: false,
 		},
 		{
 			name:    ".lift/config.toml",
 			path:    ".lift/config.toml",
-			want:    true,
+			want:    false, // support removed
 			wantErr: false,
 		},
 	}
@@ -130,7 +177,7 @@ func Test_checkDependencyFileExists(t *testing.T) {
 // TestDependencyUpdateTool tests the DependencyUpdateTool function.
 func TestDependencyUpdateTool(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name              string
 		wantErr           bool

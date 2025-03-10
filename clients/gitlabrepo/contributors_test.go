@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestContributors(t *testing.T) {
@@ -64,7 +64,7 @@ func TestContributors(t *testing.T) {
 					return tt.users, nil
 				},
 				once: new(sync.Once),
-				repourl: &repoURL{
+				repourl: &Repo{
 					commitSHA: "HEAD",
 				},
 			}
