@@ -15,15 +15,16 @@
 package raw
 
 import (
-	"fmt"
+	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/ossf/scorecard/v4/checker"
-	mockrepo "github.com/ossf/scorecard/v4/clients/mockclients"
-	scut "github.com/ossf/scorecard/v4/utests"
+	"github.com/ossf/scorecard/v5/checker"
+	mockrepo "github.com/ossf/scorecard/v5/clients/mockclients"
+	scut "github.com/ossf/scorecard/v5/utests"
 )
 
 func Test_isSecurityPolicyFilename(t *testing.T) {
@@ -50,7 +51,6 @@ func Test_isSecurityPolicyFilename(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			if got := isSecurityPolicyFilename(tt.filename); got != tt.expected {
@@ -63,7 +63,7 @@ func Test_isSecurityPolicyFilename(t *testing.T) {
 // TestSecurityPolicy tests the security policy.
 func TestSecurityPolicy(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name    string
 		files   []string
@@ -130,7 +130,6 @@ func TestSecurityPolicy(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
@@ -142,18 +141,14 @@ func TestSecurityPolicy(t *testing.T) {
 			// file contents once found. This test will return that
 			// mock file, but this specific unit test is not testing
 			// for content. As such, this test will crash without
-			// a mock GetFileContent, so this will return no content
+			// a mock GetFileReader, so this will return no content
 			// for the existing file. content test are in overall check
 			//
-			mockRepoClient.EXPECT().GetFileContent(gomock.Any()).DoAndReturn(func(fn string) ([]byte, error) {
+			mockRepoClient.EXPECT().GetFileReader(gomock.Any()).DoAndReturn(func(fn string) (io.ReadCloser, error) {
 				if tt.path == "" {
-					return nil, nil
+					return io.NopCloser(strings.NewReader("")), nil
 				}
-				content, err := os.ReadFile(tt.path)
-				if err != nil {
-					return content, fmt.Errorf("%w", err)
-				}
-				return content, nil
+				return os.Open(tt.path)
 			}).AnyTimes()
 
 			dl := scut.TestDetailLogger{}
@@ -165,9 +160,7 @@ func TestSecurityPolicy(t *testing.T) {
 
 			res, err := SecurityPolicy(&c)
 
-			if !scut.ValidateTestReturn(t, tt.name, &tt.want, &checker.CheckResult{}, &dl) {
-				t.Errorf("test failed: log message not present: %+v , for test %v", tt.want, tt.name)
-			}
+			scut.ValidateTestReturn(t, tt.name, &tt.want, &checker.CheckResult{}, &dl)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SecurityPolicy() error = %v, wantErr %v", err, tt.wantErr)
