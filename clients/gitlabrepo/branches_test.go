@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestGetBranches(t *testing.T) {
@@ -52,7 +52,7 @@ func TestGetBranches(t *testing.T) {
 			},
 			returnStatus: &gitlab.Response{
 				Response: &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 				},
 			},
 			branchReturn:        &gitlab.ProtectedBranch{},
@@ -69,21 +69,19 @@ func TestGetBranches(t *testing.T) {
 			},
 			returnStatus: &gitlab.Response{
 				Response: &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 				},
 			},
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
 			handler := branchesHandler{
 				once: new(sync.Once),
-				repourl: &repoURL{
+				repourl: &Repo{
 					projectID: "5000",
 				},
 				queryBranch: func(pid interface{}, branch string,
@@ -110,11 +108,12 @@ func TestGetBranches(t *testing.T) {
 
 			handler.once.Do(func() {})
 
-			// nolint: errcheck
-			br, _ := handler.getBranch(tt.branchName)
+			br, err := handler.getBranch(tt.branchName)
+			if err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
 
-			// nolint: unconvert
-			if string(*br.Name) != tt.expectedBranchName {
+			if *br.Name != tt.expectedBranchName {
 				t.Errorf("Branch Name (%s) didn't match expected value (%s)", *br.Name, tt.expectedBranchName)
 			}
 

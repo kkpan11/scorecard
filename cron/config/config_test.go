@@ -70,7 +70,6 @@ func getByteValueFromFile(filename string) ([]byte, error) {
 	if filename == "" {
 		return nil, nil
 	}
-	//nolint
 	return os.ReadFile(filename)
 }
 
@@ -146,7 +145,6 @@ func TestYAMLParsing(t *testing.T) {
 		},
 	}
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			byteValue, err := getByteValueFromFile(testcase.filename)
@@ -165,7 +163,6 @@ func TestYAMLParsing(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // Since os.Setenv is used.
 func TestGetStringConfigValue(t *testing.T) {
 	testcases := []struct {
 		expectedErr error
@@ -195,15 +192,14 @@ func TestGetStringConfigValue(t *testing.T) {
 			envVal:      "",
 			setEnv:      true,
 			hasError:    true,
-			expectedErr: ErrorEmptyConfigValue,
+			expectedErr: ErrEmptyConfigValue,
 		},
 	}
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			os.Unsetenv(testEnvVar)
 			if testcase.setEnv {
-				os.Setenv(testEnvVar, testcase.envVal)
+				t.Setenv(testEnvVar, testcase.envVal)
 			}
 
 			byteValue, err := getByteValueFromFile(testcase.filename)
@@ -227,7 +223,6 @@ func TestGetStringConfigValue(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // Since os.Setenv is used.
 func TestGetIntConfigValue(t *testing.T) {
 	testcases := []struct {
 		expectedErr error
@@ -254,11 +249,10 @@ func TestGetIntConfigValue(t *testing.T) {
 		},
 	}
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			os.Unsetenv(testEnvVar)
 			if testcase.setEnv {
-				os.Setenv(testEnvVar, testcase.envVal)
+				t.Setenv(testEnvVar, testcase.envVal)
 			}
 
 			byteValue, err := getByteValueFromFile(testcase.filename)
@@ -344,7 +338,7 @@ func TestGetBigQueryDataset(t *testing.T) {
 		os.Unsetenv(bigqueryDataset)
 		dataset, err := GetBigQueryDataset()
 		if err != nil {
-			t.Errorf("failed to get production BQ datset from config: %v", err)
+			t.Errorf("failed to get production BQ dataset from config: %v", err)
 		}
 		if dataset != prodBigQueryDataset {
 			t.Errorf("test failed: expected - %s, got = %s", prodBigQueryDataset, dataset)
@@ -448,7 +442,6 @@ func TestInputBucket(t *testing.T) {
 		},
 	}
 	for _, testcase := range tests {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			os.Unsetenv(testcase.envVar)
 			got, err := testcase.f()
@@ -484,7 +477,6 @@ func TestEnvVarName(t *testing.T) {
 		},
 	}
 	for _, testcase := range tests {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			got := envVarName(testcase.mapName, testcase.subKey)
@@ -511,14 +503,13 @@ func TestGetAdditionalParams(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "nonexistant value",
+			name:    "nonexistent value",
 			mapName: "this-value-should-never-exist",
 			want:    map[string]string{},
 			wantErr: true,
 		},
 	}
 	for _, testcase := range tests {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			got, err := GetAdditionalParams(testcase.mapName)

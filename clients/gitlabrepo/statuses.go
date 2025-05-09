@@ -17,17 +17,17 @@ package gitlabrepo
 import (
 	"fmt"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
-	"github.com/ossf/scorecard/v4/clients"
+	"github.com/ossf/scorecard/v5/clients"
 )
 
 type statusesHandler struct {
 	glClient *gitlab.Client
-	repourl  *repoURL
+	repourl  *Repo
 }
 
-func (handler *statusesHandler) init(repourl *repoURL) {
+func (handler *statusesHandler) init(repourl *Repo) {
 	handler.repourl = repourl
 }
 
