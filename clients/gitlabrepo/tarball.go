@@ -29,9 +29,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
-	sce "github.com/ossf/scorecard/v4/errors"
+	sce "github.com/ossf/scorecard/v5/errors"
 )
 
 const (
@@ -69,7 +69,7 @@ type tarballHandler struct {
 	once        *sync.Once
 	ctx         context.Context
 	repo        *gitlab.Project
-	repourl     *repoURL
+	repourl     *Repo
 	commitSHA   string
 	tempDir     string
 	tempTarFile string
@@ -83,7 +83,7 @@ type gitLabLint struct {
 	Valid      bool     `json:"valid"`
 }
 
-func (handler *tarballHandler) init(ctx context.Context, repourl *repoURL, repo *gitlab.Project, commitSHA string) {
+func (handler *tarballHandler) init(ctx context.Context, repourl *Repo, repo *gitlab.Project, commitSHA string) {
 	handler.errSetup = nil
 	handler.once = new(sync.Once)
 	handler.ctx = ctx
@@ -120,7 +120,7 @@ func (handler *tarballHandler) setup() error {
 }
 
 func (handler *tarballHandler) getTarball() error {
-	url := fmt.Sprintf("%s/api/v4/projects/%d/repository/archive.tar.gz?sha=%s",
+	url := fmt.Sprintf("https://%s/api/v4/projects/%d/repository/archive.tar.gz?sha=%s",
 		handler.repourl.Host(), handler.repo.ID, handler.commitSHA)
 
 	// Create a temp file.  This automatically appends a random number to the name.
@@ -130,7 +130,7 @@ func (handler *tarballHandler) getTarball() error {
 	}
 	repoFile, err := os.CreateTemp(tempDir, repoFilename)
 	if err != nil {
-		return fmt.Errorf("%w io.Copy: %v", errTarballNotFound, err)
+		return fmt.Errorf("%w io.Copy: %w", errTarballNotFound, err)
 	}
 	defer repoFile.Close()
 	err = handler.apiFunction(url, tempDir, repoFile)
@@ -138,7 +138,7 @@ func (handler *tarballHandler) getTarball() error {
 		return fmt.Errorf("gitlab.apiFunction: %w", err)
 	}
 	// Gitlab url for pulling combined ci
-	url = fmt.Sprintf("%s/api/v4/projects/%d/ci/lint",
+	url = fmt.Sprintf("https://%s/api/v4/projects/%d/ci/lint",
 		handler.repourl.Host(), handler.repo.ID)
 	ciFile, err := os.CreateTemp(tempDir, "gitlabscorecard_lint*.json")
 	if err != nil {
@@ -188,23 +188,23 @@ func (handler *tarballHandler) apiFunction(url, tempDir string, repoFile *os.Fil
 	req.Header.Set("PRIVATE-TOKEN", os.Getenv("GITLAB_AUTH_TOKEN"))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w io.Copy: %v", errTarballNotFound, err)
+		return fmt.Errorf("%w io.Copy: %w", errTarballNotFound, err)
 	}
 	defer resp.Body.Close()
 
 	// Handler 400/404 errors.
 	switch resp.StatusCode {
 	case http.StatusNotFound, http.StatusBadRequest:
-		return fmt.Errorf("%w io.Copy: %v", errTarballNotFound, err)
+		return fmt.Errorf("%w io.Copy: %w", errTarballNotFound, err)
 	}
 	if _, err := io.Copy(repoFile, resp.Body); err != nil {
 		// If the incoming tarball is corrupted or the server times out.
-		return fmt.Errorf("%w io.Copy: %v", errTarballNotFound, err)
+		return fmt.Errorf("%w io.Copy: %w", errTarballNotFound, err)
 	}
 	return nil
 }
 
-// nolint: gocognit
+//nolint:gocognit
 func (handler *tarballHandler) extractTarball() error {
 	in, err := os.OpenFile(handler.tempTarFile, os.O_RDONLY, 0o644)
 	if err != nil {
@@ -212,7 +212,7 @@ func (handler *tarballHandler) extractTarball() error {
 	}
 	gz, err := gzip.NewReader(in)
 	if err != nil {
-		return fmt.Errorf("%w: gzip.NewReader %v %v", errTarballCorrupted, handler.tempTarFile, err)
+		return fmt.Errorf("%w: gzip.NewReader %v %w", errTarballCorrupted, handler.tempTarFile, err)
 	}
 	tr := tar.NewReader(gz)
 	for {
@@ -221,7 +221,7 @@ func (handler *tarballHandler) extractTarball() error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("%w tarReader.Next: %v", errTarballCorrupted, err)
+			return fmt.Errorf("%w tarReader.Next: %w", errTarballCorrupted, err)
 		}
 
 		switch header.Typeflag {
@@ -256,11 +256,11 @@ func (handler *tarballHandler) extractTarball() error {
 				return fmt.Errorf("os.Create: %w", err)
 			}
 
-			//nolint: gosec
+			//nolint:gosec
 			// Potential for DoS vulnerability via decompression bomb.
 			// Since such an attack will only impact a single shard, ignoring this for now.
 			if _, err := io.Copy(outFile, tr); err != nil {
-				return fmt.Errorf("%w io.Copy: %v", errTarballCorrupted, err)
+				return fmt.Errorf("%w io.Copy: %w", errTarballCorrupted, err)
 			}
 			outFile.Close()
 			handler.files = append(handler.files,
@@ -292,15 +292,15 @@ func (handler *tarballHandler) listFiles(predicate func(string) (bool, error)) (
 	return ret, nil
 }
 
-func (handler *tarballHandler) getFileContent(filename string) ([]byte, error) {
+func (handler *tarballHandler) getFile(filename string) (*os.File, error) {
 	if err := handler.setup(); err != nil {
 		return nil, fmt.Errorf("error during tarballHandler.setup: %w", err)
 	}
-	content, err := os.ReadFile(filepath.Join(handler.tempDir, filename))
+	f, err := os.Open(filepath.Join(handler.tempDir, filename))
 	if err != nil {
-		return content, fmt.Errorf("os.ReadFile: %w", err)
+		return nil, fmt.Errorf("open file: %w", err)
 	}
-	return content, nil
+	return f, nil
 }
 
 func (handler *tarballHandler) cleanup() error {

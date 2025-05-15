@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ossf/scorecard/v4/clients"
+	"github.com/ossf/scorecard/v5/clients"
 )
 
 func TestCopyBoolPtr(t *testing.T) {
@@ -49,11 +49,10 @@ func TestCopyBoolPtr(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			copyBoolPtr(tt.src, tt.dest)
-			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && **tt.dest != *tt.want) { //nolint:lll
+			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && **tt.dest != *tt.want) {
 				t.Errorf("copyBoolPtr() got = %v, want %v", *tt.dest, tt.want)
 			}
 		})
@@ -99,11 +98,10 @@ func TestCopyInt32Ptr(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			copyInt32Ptr(tt.src, tt.dest)
-			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && **tt.dest != *tt.want) { //nolint:lll
+			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && **tt.dest != *tt.want) {
 				t.Errorf("copyInt32Ptr() got = %v, want %v", *tt.dest, tt.want)
 			}
 		})
@@ -149,11 +147,10 @@ func TestCopyStringPtr(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			copyStringPtr(tt.src, tt.dest)
-			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && **tt.dest != *tt.want) { //nolint:lll
+			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && **tt.dest != *tt.want) {
 				t.Errorf("copyStringPtr() got = %v, want %v", *tt.dest, tt.want)
 			}
 		})
@@ -197,11 +194,10 @@ func TestCopyTimePtr(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			copyTimePtr(tt.src, tt.dest)
-			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && !(*tt.dest).Equal(*tt.want)) { //nolint:lll
+			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && !(*tt.dest).Equal(*tt.want)) {
 				t.Errorf("copyTimePtr() got = %v, want %v", *tt.dest, tt.want)
 			}
 		})
@@ -236,7 +232,6 @@ func TestCopyStringSlice(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			copyStringSlice(tt.src, &tt.dest)
@@ -279,11 +274,10 @@ func TestCopyRepoAssociationPtr(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			copyRepoAssociationPtr(tt.src, tt.dest)
-			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && !reflect.DeepEqual(**tt.dest, *tt.want)) { //nolint:lll
+			if (tt.want == nil && *tt.dest != nil) || (tt.want != nil && *tt.dest == nil) || (tt.want != nil && *tt.dest != nil && !reflect.DeepEqual(**tt.dest, *tt.want)) {
 				t.Errorf("copyRepoAssociationPtr() got = %v, want %v", *tt.dest, tt.want)
 			}
 		})

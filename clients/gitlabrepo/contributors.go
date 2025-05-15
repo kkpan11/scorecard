@@ -19,9 +19,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
-	"github.com/ossf/scorecard/v4/clients"
+	"github.com/ossf/scorecard/v5/clients"
 )
 
 type contributorsHandler struct {
@@ -30,11 +30,11 @@ type contributorsHandler struct {
 	glClient       *gitlab.Client
 	once           *sync.Once
 	errSetup       error
-	repourl        *repoURL
+	repourl        *Repo
 	contributors   []clients.User
 }
 
-func (handler *contributorsHandler) init(repourl *repoURL) {
+func (handler *contributorsHandler) init(repourl *Repo) {
 	handler.repourl = repourl
 	handler.errSetup = nil
 	handler.once = new(sync.Once)
@@ -62,7 +62,7 @@ func (handler *contributorsHandler) retrieveContributors(project string) ([]*git
 			},
 		)
 		if err != nil {
-			//nolint wrapcheck
+			//nolint:wrapcheck
 			return nil, err
 		}
 
@@ -78,7 +78,7 @@ func (handler *contributorsHandler) retrieveContributors(project string) ([]*git
 func (handler *contributorsHandler) retrieveUsers(queryName string) ([]*gitlab.User, error) {
 	users, _, err := handler.glClient.Search.Users(queryName, &gitlab.SearchOptions{})
 	if err != nil {
-		//nolint wrapcheck
+		//nolint:wrapcheck
 		return nil, err
 	}
 	return users, nil
