@@ -44,17 +44,14 @@ func Test_GetURI_calls_client_get_with_input(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != tt.wantURL {
 					t.Errorf("Expected to request '%s', got: %s", tt.wantURL, r.URL.Path)
 				}
-				// nolint
 				w.WriteHeader(http.StatusOK)
-				// nolint
-				w.Write([]byte(tt.wantResponse))
+				w.Write([]byte(tt.wantResponse)) //nolint:errcheck
 			}))
 			defer server.Close()
 			client := PackageManagerClient{}
@@ -63,6 +60,7 @@ func Test_GetURI_calls_client_get_with_input(t *testing.T) {
 				t.Errorf("Test_GetURI_calls_client_get_with_input() error in Get= %v", err)
 				return
 			}
+			defer got.Body.Close()
 			body, err := io.ReadAll(got.Body)
 			if err != nil {
 				t.Errorf("Test_GetURI_calls_client_get_with_input() error in ReadAll= %v", err)
@@ -99,17 +97,14 @@ func Test_Get_calls_client_get_with_input(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != tt.wantURL {
 					t.Errorf("Expected to request '%s', got: %s", tt.wantURL, r.URL.Path)
 				}
-				// nolint
 				w.WriteHeader(http.StatusOK)
-				// nolint
-				w.Write([]byte(tt.wantResponse))
+				w.Write([]byte(tt.wantResponse)) //nolint:errcheck
 			}))
 			defer server.Close()
 			client := PackageManagerClient{}
@@ -118,6 +113,7 @@ func Test_Get_calls_client_get_with_input(t *testing.T) {
 				t.Errorf("Test_Get_calls_client_get_with_input() error in Get = %v", err)
 				return
 			}
+			defer got.Body.Close()
 			body, err := io.ReadAll(got.Body)
 			if err != nil {
 				t.Errorf("Test_Get_calls_client_get_with_input() error in ReadAll = %v", err)
