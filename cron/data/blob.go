@@ -22,13 +22,14 @@ import (
 	"io"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"gocloud.dev/blob"
 	// Needed to read file:/// buckets. Intended primarily for testing, though needed here for tests outside the package.
 	_ "gocloud.dev/blob/fileblob"
 	// Needed to link in GCP drivers.
 	_ "gocloud.dev/blob/gcsblob"
 
-	"github.com/ossf/scorecard/v4/cron/config"
+	"github.com/ossf/scorecard/v5/cron/config"
 )
 
 const (
@@ -100,7 +101,8 @@ func BlobExists(ctx context.Context, bucketURL, key string) (bool, error) {
 	defer bucket.Close()
 
 	ret, err := bucket.Exists(ctx, key)
-	if err != nil {
+	// TODO(https://github.com/ossf/scorecard/issues/4636)
+	if err != nil && !errors.Is(err, storage.ErrObjectNotExist) {
 		return ret, fmt.Errorf("error during bucket.Exists: %w", err)
 	}
 	return ret, nil
@@ -156,7 +158,7 @@ func ParseBlobFilename(key string) (time.Time, string, error) {
 	objectName := key[len(filePrefixFormat):]
 	t, err := time.Parse(filePrefixFormat, prefix)
 	if err != nil {
-		return t, "", fmt.Errorf("%w: %v", errParseBlobName, err)
+		return t, "", fmt.Errorf("%w: %w", errParseBlobName, err)
 	}
 	return t, objectName, nil
 }

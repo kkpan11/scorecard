@@ -18,13 +18,12 @@
 package main
 
 import (
-	_ "github.com/golang/mock/mockgen"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/google/addlicense"
+	_ "go.uber.org/mock/mockgen"
 
 	_ "github.com/google/ko"
-	_ "github.com/goreleaser/goreleaser"
-	_ "github.com/naveensrinivasan/stunning-tribble"
+	_ "github.com/goreleaser/goreleaser/v2"
 	_ "github.com/onsi/ginkgo/v2/ginkgo"
 	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 )
