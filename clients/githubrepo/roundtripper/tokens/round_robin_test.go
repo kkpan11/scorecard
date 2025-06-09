@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 
-//golint:paralleltest
+//nolint:paralleltest // order dependent
 func TestNext(t *testing.T) {
 	tokens := []string{"token1", "token2", "token3", "token4", "token5"}
 	rr := makeRoundRobinAccessor(tokens)

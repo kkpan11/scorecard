@@ -22,7 +22,7 @@ package mockrepo
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockRepo is a mock of Repo interface.
@@ -104,6 +104,20 @@ func (m *MockRepo) Metadata() []string {
 func (mr *MockRepoMockRecorder) Metadata() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Metadata", reflect.TypeOf((*MockRepo)(nil).Metadata))
+}
+
+// Path mocks base method.
+func (m *MockRepo) Path() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Path indicates an expected call of Path.
+func (mr *MockRepoMockRecorder) Path() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockRepo)(nil).Path))
 }
 
 // String mocks base method.
