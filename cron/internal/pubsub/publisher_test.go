@@ -21,7 +21,7 @@ import (
 
 	"gocloud.dev/pubsub"
 
-	"github.com/ossf/scorecard/v4/cron/data"
+	"github.com/ossf/scorecard/v5/cron/data"
 )
 
 type mockSucceedTopic struct{}
@@ -33,13 +33,12 @@ func (topic *mockSucceedTopic) Send(ctx context.Context, msg *pubsub.Message) er
 type mockFailTopic struct{}
 
 func (topic *mockFailTopic) Send(ctx context.Context, msg *pubsub.Message) error {
-	//nolint: goerr113
 	return fmt.Errorf("mockFailTopic failed to send")
 }
 
 func TestPublish(t *testing.T) {
 	t.Parallel()
-	//nolint: govet
+	//nolint:govet
 	testcases := []struct {
 		numErrors uint64
 		name      string
@@ -61,7 +60,6 @@ func TestPublish(t *testing.T) {
 		},
 	}
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
