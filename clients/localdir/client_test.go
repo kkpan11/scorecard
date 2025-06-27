@@ -17,6 +17,7 @@ package localdir
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -24,8 +25,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/log"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/log"
 )
 
 func TestClient_CreationAndCaching(t *testing.T) {
@@ -58,7 +59,6 @@ func TestClient_CreationAndCaching(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt // Re-initializing variable so it is not changed while executing the closure below
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -119,6 +119,7 @@ func isSortedString(x, y string) bool {
 	return x < y
 }
 
+//nolint:gocognit
 func TestClient_GetFileListAndContent(t *testing.T) {
 	t.Parallel()
 	testcases := []struct {
@@ -168,7 +169,6 @@ func TestClient_GetFileListAndContent(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -189,12 +189,18 @@ func TestClient_GetFileListAndContent(t *testing.T) {
 
 			// Test GetFileContent API.
 			for _, getcontenttest := range testcase.getcontentTests {
-				content, err := getFileContent(testcase.inputFolder, getcontenttest.filename)
+				f, err := getFile(testcase.inputFolder, getcontenttest.filename)
 				if getcontenttest.err != nil && !errors.Is(err, getcontenttest.err) {
 					t.Errorf("test failed: expected - %v, got - %v", getcontenttest.err, err)
 				}
-				if getcontenttest.err == nil && !cmp.Equal(getcontenttest.output, content) {
-					t.Errorf("test failed: expected - %s, got - %s", string(getcontenttest.output), string(content))
+				if err == nil {
+					content, err := io.ReadAll(f)
+					if err != nil {
+						t.Fatalf("unexpected error: %v", err)
+					}
+					if !cmp.Equal(getcontenttest.output, content) {
+						t.Errorf("test failed: expected - %s, got - %s", string(getcontenttest.output), string(content))
+					}
 				}
 			}
 		})
