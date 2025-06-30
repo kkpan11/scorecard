@@ -26,13 +26,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/google"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/ossf/scorecard/v4/cron/data"
+	"github.com/ossf/scorecard/v5/cron/data"
 )
 
 const stableTag = "stable"
 
 var images = []string{
-	"gcr.io/openssf/scorecard",
 	"gcr.io/openssf/scorecard-batch-controller",
 	"gcr.io/openssf/scorecard-batch-worker",
 	"gcr.io/openssf/scorecard-cii-worker",
@@ -55,7 +54,7 @@ func scriptHandler(w http.ResponseWriter, r *http.Request) {
 				http.StatusBadRequest)
 			return
 		}
-		authn, err := google.NewEnvAuthenticator()
+		authn, err := google.NewEnvAuthenticator(r.Context())
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error in NewEnvAuthenticator: %v", err), http.StatusInternalServerError)
 			return
@@ -80,8 +79,8 @@ func scriptHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/", scriptHandler)
-	fmt.Printf("Starting HTTP server on port 8080 ...\n")
-	// nolint:gosec // internal server.
+	log.Printf("Starting HTTP server on port 8080 ...\n")
+	//nolint:gosec // internal server.
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}

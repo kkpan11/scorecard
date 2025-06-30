@@ -16,22 +16,23 @@ package gitlabrepo
 
 import (
 	"fmt"
+	"net/http"
 	"sync"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
-	"github.com/ossf/scorecard/v4/clients"
+	"github.com/ossf/scorecard/v5/clients"
 )
 
 type issuesHandler struct {
 	glClient *gitlab.Client
 	once     *sync.Once
 	errSetup error
-	repourl  *repoURL
+	repourl  *Repo
 	issues   []clients.Issue
 }
 
-func (handler *issuesHandler) init(repourl *repoURL) {
+func (handler *issuesHandler) init(repourl *Repo) {
 	handler.repourl = repourl
 	handler.errSetup = nil
 	handler.once = new(sync.Once)
@@ -47,13 +48,13 @@ func (handler *issuesHandler) setup() error {
 		}
 
 		// There doesn't seem to be a good way to get user access_levels in gitlab so the following way may seem incredibly
-		// barberic, however I couldn't find a better way in the docs.
+		// barbaric, however I couldn't find a better way in the docs.
 		projMemberships, resp, err := handler.glClient.ProjectMembers.ListAllProjectMembers(
 			handler.repourl.projectID, &gitlab.ListProjectMembersOptions{})
-		if err != nil && resp.StatusCode != 401 {
+		if err != nil && resp.StatusCode != http.StatusUnauthorized {
 			handler.errSetup = fmt.Errorf("unable to find access tokens associated with the project id: %w", err)
 			return
-		} else if resp.StatusCode == 401 {
+		} else if resp.StatusCode == http.StatusUnauthorized {
 			handler.errSetup = fmt.Errorf("insufficient permissions to check issue author associations %w", err)
 			return
 		}

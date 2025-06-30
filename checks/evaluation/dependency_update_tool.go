@@ -15,20 +15,43 @@
 package evaluation
 
 import (
-	"github.com/ossf/scorecard/v4/checker"
-	"github.com/ossf/scorecard/v4/finding"
+	"github.com/ossf/scorecard/v5/checker"
+	sce "github.com/ossf/scorecard/v5/errors"
+	"github.com/ossf/scorecard/v5/finding"
+	"github.com/ossf/scorecard/v5/probes/dependencyUpdateToolConfigured"
 )
 
-// DependencyUpdateTool applies the score policy for the Dependency-Update-Tool check.
+// DependencyUpdateTool applies the score policy and logs the details
+// for the Dependency-Update-Tool check.
 func DependencyUpdateTool(name string,
-	findings []finding.Finding,
+	findings []finding.Finding, dl checker.DetailLogger,
 ) checker.CheckResult {
-	for i := range findings {
-		f := &findings[i]
-		if f.Outcome == finding.OutcomePositive {
-			return checker.CreateMaxScoreResult(name, "update tool detected")
-		}
+	expectedProbes := []string{
+		dependencyUpdateToolConfigured.Probe,
+	}
+	if !finding.UniqueProbesEqual(findings, expectedProbes) {
+		e := sce.WithMessage(sce.ErrScorecardInternal, "invalid probe results")
+		return checker.CreateRuntimeErrorResult(name, e)
 	}
 
+	var usesTool bool
+	for i := range findings {
+		f := &findings[i]
+		var logLevel checker.DetailType
+		switch f.Outcome {
+		case finding.OutcomeFalse:
+			logLevel = checker.DetailWarn
+		case finding.OutcomeTrue:
+			usesTool = true
+			logLevel = checker.DetailInfo
+		default:
+			logLevel = checker.DetailDebug
+		}
+		checker.LogFinding(dl, f, logLevel)
+	}
+
+	if usesTool {
+		return checker.CreateMaxScoreResult(name, "update tool detected")
+	}
 	return checker.CreateMinScoreResult(name, "no update tool detected")
 }

@@ -20,13 +20,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ossf/scorecard/v4/checker"
-	"github.com/ossf/scorecard/v4/checks"
-	"github.com/ossf/scorecard/v4/checks/raw"
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/clients/githubrepo"
-	"github.com/ossf/scorecard/v4/clients/gitlabrepo"
-	scut "github.com/ossf/scorecard/v4/utests"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/checks"
+	"github.com/ossf/scorecard/v5/checks/raw"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/clients/githubrepo"
+	"github.com/ossf/scorecard/v5/clients/gitlabrepo"
+	scut "github.com/ossf/scorecard/v5/utests"
 )
 
 // TODO: use dedicated repo that don't change.
@@ -54,7 +54,7 @@ var _ = Describe("E2E TEST:"+checks.CheckCodeReview, func() {
 				NumberOfDebug: 0,
 			}
 			result := checks.CodeReview(&req)
-			Expect(scut.ValidateTestReturn(nil, "use code reviews", &expected, &result, &dl)).Should(BeTrue())
+			scut.ValidateTestReturn(GinkgoTB(), "use code reviews", &expected, &result, &dl)
 			Expect(repoClient.Close()).Should(BeNil())
 		})
 		It("Should return use of implicit code reviews at commit", func() {
@@ -93,11 +93,10 @@ var _ = Describe("E2E TEST:"+checks.CheckCodeReview, func() {
 				Dlogger:    &dl,
 			}
 			expected := scut.TestReturn{
-				Score:         0,
-				NumberOfDebug: 18,
+				Score: 0,
 			}
 			result := checks.CodeReview(&req)
-			Expect(scut.ValidateTestReturn(nil, "use code reviews", &expected, &result, &dl)).Should(BeTrue())
+			scut.ValidateTestReturn(GinkgoTB(), "use code reviews", &expected, &result, &dl)
 			Expect(repoClient.Close()).Should(BeNil())
 		})
 		It("Should return partial score for a single-maintainer project with some unreviewed human changesets", func() {
@@ -115,11 +114,10 @@ var _ = Describe("E2E TEST:"+checks.CheckCodeReview, func() {
 				Dlogger:    &dl,
 			}
 			expected := scut.TestReturn{
-				Score:         1,
-				NumberOfDebug: 10,
+				Score: 1,
 			}
 			result := checks.CodeReview(&req)
-			Expect(scut.ValidateTestReturn(nil, "use code reviews", &expected, &result, &dl)).Should(BeTrue())
+			scut.ValidateTestReturn(GinkgoTB(), "use code reviews", &expected, &result, &dl)
 			Expect(repoClient.Close()).Should(BeNil())
 		})
 	})
@@ -149,7 +147,7 @@ var _ = Describe("E2E TEST:"+checks.CheckCodeReview, func() {
 			NumberOfDebug: 1,
 		}
 		result := checks.CodeReview(&req)
-		Expect(scut.ValidateTestReturn(nil, "use code reviews", &expected, &result, &dl)).Should(BeTrue())
+		scut.ValidateTestReturn(GinkgoTB(), "use code reviews", &expected, &result, &dl)
 		Expect(repoClient.Close()).Should(BeNil())
 	})
 	// GitLab doesn't seem to preserve merge requests (pull requests in github) and some users had data lost in
@@ -179,7 +177,7 @@ var _ = Describe("E2E TEST:"+checks.CheckCodeReview, func() {
 			NumberOfDebug: 1,
 		}
 		result := checks.CodeReview(&req)
-		Expect(scut.ValidateTestReturn(nil, "use code reviews", &expected, &result, &dl)).Should(BeTrue())
+		scut.ValidateTestReturn(GinkgoTB(), "use code reviews", &expected, &result, &dl)
 		Expect(repoClient.Close()).Should(BeNil())
 	})
 })

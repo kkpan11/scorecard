@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestContributors(t *testing.T) {
@@ -51,8 +51,6 @@ func TestContributors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -64,7 +62,7 @@ func TestContributors(t *testing.T) {
 					return tt.users, nil
 				},
 				once: new(sync.Once),
-				repourl: &repoURL{
+				repourl: &Repo{
 					commitSHA: "HEAD",
 				},
 			}

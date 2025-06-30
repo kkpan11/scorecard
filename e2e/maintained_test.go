@@ -21,12 +21,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ossf/scorecard/v4/checker"
-	"github.com/ossf/scorecard/v4/checks"
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/clients/githubrepo"
-	"github.com/ossf/scorecard/v4/clients/gitlabrepo"
-	scut "github.com/ossf/scorecard/v4/utests"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/checks"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/clients/githubrepo"
+	"github.com/ossf/scorecard/v5/clients/gitlabrepo"
+	scut "github.com/ossf/scorecard/v5/utests"
 )
 
 var _ = Describe("E2E TEST:"+checks.CheckMaintained, func() {
@@ -53,7 +53,7 @@ var _ = Describe("E2E TEST:"+checks.CheckMaintained, func() {
 			}
 			result := checks.Maintained(&req)
 			// New version.
-			Expect(scut.ValidateTestReturn(nil, "active repo", &expected, &result, &dl)).Should(BeTrue())
+			scut.ValidateTestReturn(GinkgoTB(), "active repo", &expected, &result, &dl)
 			Expect(repoClient.Close()).Should(BeNil())
 		})
 		It("Should return valid maintained status - GitLab", func() {
@@ -82,7 +82,7 @@ var _ = Describe("E2E TEST:"+checks.CheckMaintained, func() {
 			}
 			result := checks.Maintained(&req)
 			// New version.
-			Expect(scut.ValidateTestReturn(nil, "active repo", &expected, &result, &dl)).Should(BeTrue())
+			scut.ValidateTestReturn(GinkgoTB(), "active repo", &expected, &result, &dl)
 			Expect(repoClient.Close()).Should(BeNil())
 		})
 	})

@@ -23,9 +23,7 @@ on:
   - main
 
 env:
-  PROTOC_VERSION: 3.17.3
-  GO_VERSION_FILE: go.mod # no good way of getting a mutual version between go.mod and tools/go.mod
-  CACHE_DEPENDENCY_PATH: "**/go.sum" # include both go.sum and tools/go.sum
+  GO_VERSION: 1.24
 
 jobs:
   docs_only_check:
@@ -37,225 +35,56 @@ jobs:
       docs_only: ${{ steps.docs_only_check.outputs.docs_only }}
     steps:
     - name: Check out code
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 #v3.5.3
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
       with:
         fetch-depth: 2 # needed to diff changed files
-    - id: files
-      name: Get changed files
-      uses: tj-actions/changed-files@54849deb963ca9f24185fb5de2965e002d066e6b #v37.0.5
-      with:
-        files_ignore: '**.md'
     - id: docs_only_check
-      if: steps.files.outputs.any_changed != 'true'
       name: Check for docs-only changes
-      run: echo "docs_only=true" >> $GITHUB_OUTPUT
+      run: |
+        set +e # dont fail based on grep exit code
+        git diff --name-only HEAD~1 | grep --ignore-case --invert-match '.md$'
+        if [ $? -eq 1 ]; then
+            # no grep match (all files end in .md) produces exit code 1
+            echo "docs_only=true" >> $GITHUB_OUTPUT
+        else
+            echo "docs_only=false" >> $GITHUB_OUTPUT
+        fi
 
-  scorecard:
-    name: scorecard-docker
+  docker_matrix:
+    strategy:
+      matrix:
+        target:
+          - 'scorecard-docker'
+          - 'cron-controller-docker'
+          - 'cron-worker-docker'
+          - 'cron-cii-worker-docker'
+          - 'cron-bq-transfer-docker'
+          - 'cron-webhook-docker'
+          - 'cron-github-server-docker'
+          - 'build-attestor-docker'
+    name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs:
-      - docs_only_check
-    if: (needs.docs_only_check.outputs.docs_only != 'true')
+    needs: docs_only_check
+    # ideally we put one "if" here, but due to how skipped matrix jobs work, we need one for each step
+    # https://github.com/orgs/community/discussions/9141
     steps:
      - name: Harden Runner
-       uses: step-security/harden-runner@55d479fb1c5bcad5a4f9099a5d9f37c8857b2845 # v2.4.1
+       if: (needs.docs_only_check.outputs.docs_only != 'true')
+       uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
        with:
          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-     - name: Install Protoc
-       uses: arduino/setup-protoc@149f6c87b92550901b26acd1632e11c3662e381f # v1.3.0
-       with:
-        version: ${{ env.PROTOC_VERSION }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
      - name: Clone the code
-       uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-     - name: Setup Go
-       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+       if: (needs.docs_only_check.outputs.docs_only != 'true')
+       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+     - name: Setup Go # needed for some of the Makefile evaluations, even if building happens in Docker 
+       if: (needs.docs_only_check.outputs.docs_only != 'true')
+       uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
        with:
-         go-version-file: ${{ env.GO_VERSION_FILE }}
+         go-version: ${{ env.GO_VERSION }}
          check-latest: true
-         cache: true
-         cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+         cache: false # the building happens in Docker, so saving this cache would negatively impact other builds
      - name: docker build
-       run: make scorecard-docker
-  cron-controller:
-    name: cron-controller-docker
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    needs:
-      - docs_only_check
-    if: (needs.docs_only_check.outputs.docs_only != 'true')
-    steps:
-     - name: Harden Runner
-       uses: step-security/harden-runner@55d479fb1c5bcad5a4f9099a5d9f37c8857b2845 # v2.4.1
-       with:
-         egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-     - name: Install Protoc
-       uses: arduino/setup-protoc@149f6c87b92550901b26acd1632e11c3662e381f # v1.3.0
-       with:
-        version: ${{ env.PROTOC_VERSION }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-     - name: Clone the code
-       uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-     - name: Setup Go
-       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-       with:
-         go-version-file: ${{ env.GO_VERSION_FILE }}
-         check-latest: true
-         cache: true
-         cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-     - name: docker build
-       run: make cron-controller-docker
-  cron-worker:
-    name: cron-worker-docker
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    needs:
-      - docs_only_check
-    if: (needs.docs_only_check.outputs.docs_only != 'true')
-    steps:
-     - name: Harden Runner
-       uses: step-security/harden-runner@55d479fb1c5bcad5a4f9099a5d9f37c8857b2845 # v2.4.1
-       with:
-         egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-     - name: Install Protoc
-       uses: arduino/setup-protoc@149f6c87b92550901b26acd1632e11c3662e381f # v1.3.0
-       with:
-        version: ${{ env.PROTOC_VERSION }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-     - name: Clone the code
-       uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-     - name: Setup Go
-       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-       with:
-         go-version-file: ${{ env.GO_VERSION_FILE }}
-         check-latest: true
-         cache: true
-         cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-     - name: docker build
-       run: make cron-worker-docker
-  cron-cii-worker:
-    name: cron-cii--worker-docker
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    needs:
-      - docs_only_check
-    if: (needs.docs_only_check.outputs.docs_only != 'true')
-    steps:
-     - name: Harden Runner
-       uses: step-security/harden-runner@55d479fb1c5bcad5a4f9099a5d9f37c8857b2845 # v2.4.1
-       with:
-         egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-     - name: Install Protoc
-       uses: arduino/setup-protoc@149f6c87b92550901b26acd1632e11c3662e381f # v1.3.0
-       with:
-        version: ${{ env.PROTOC_VERSION }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-     - name: Clone the code
-       uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-     - name: Setup Go
-       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-       with:
-         go-version-file: ${{ env.GO_VERSION_FILE }}
-         check-latest: true
-         cache: true
-         cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-     - name: docker build
-       run: make cron-cii-worker-docker
-  cron-bq-transfer:
-    name: cron-bq-transfer-docker
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    needs:
-      - docs_only_check
-    if: (needs.docs_only_check.outputs.docs_only != 'true')
-    steps:
-     - name: Harden Runner
-       uses: step-security/harden-runner@55d479fb1c5bcad5a4f9099a5d9f37c8857b2845 # v2.4.1
-       with:
-         egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-     - name: Install Protoc
-       uses: arduino/setup-protoc@149f6c87b92550901b26acd1632e11c3662e381f # v1.3.0
-       with:
-        version: ${{ env.PROTOC_VERSION }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-     - name: Clone the code
-       uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-     - name: Setup Go
-       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-       with:
-         go-version-file: ${{ env.GO_VERSION_FILE }}
-         check-latest: true
-         cache: true
-         cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-     - name: docker build
-       run: make cron-bq-transfer-docker
-  cron-webhook:
-    name: cron-webhook-docker
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    needs:
-      - docs_only_check
-    if: (needs.docs_only_check.outputs.docs_only != 'true')
-    steps:
-     - name: Harden Runner
-       uses: step-security/harden-runner@55d479fb1c5bcad5a4f9099a5d9f37c8857b2845 # v2.4.1
-       with:
-         egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-     - name: Install Protoc
-       uses: arduino/setup-protoc@149f6c87b92550901b26acd1632e11c3662e381f # v1.3.0
-       with:
-        version: ${{ env.PROTOC_VERSION }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-     - name: Clone the code
-       uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-     - name: Setup Go
-       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-       with:
-         go-version-file: ${{ env.GO_VERSION_FILE }}
-         check-latest: true
-         cache: true
-         cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
-     - name: docker build
-       run: make cron-webhook-docker
-  cron-github-server:
-    name: cron-github-server-docker
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    needs:
-      - docs_only_check
-    if: (needs.docs_only_check.outputs.docs_only != 'true')
-    steps:
-     - name: Harden Runner
-       uses: step-security/harden-runner@55d479fb1c5bcad5a4f9099a5d9f37c8857b2845 # v2.4.1
-       with:
-         egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-     - name: Install Protoc
-       uses: arduino/setup-protoc@149f6c87b92550901b26acd1632e11c3662e381f # v1.3.0
-       with:
-        version: ${{ env.PROTOC_VERSION }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-     - name: Clone the code
-       uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-     - name: Setup Go
-       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-       with:
-         go-version-file: ${{ env.GO_VERSION_FILE }}
-         check-latest: true
-         cache: true
-     - name: docker build
-       run: make cron-github-server-docker
+       if: (needs.docs_only_check.outputs.docs_only != 'true')
+       run: make ${{ matrix.target }}

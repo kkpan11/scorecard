@@ -15,15 +15,16 @@
 package raw
 
 import (
-	"fmt"
+	"io"
 	"os"
+	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
-	"github.com/ossf/scorecard/v4/checker"
-	mockrepo "github.com/ossf/scorecard/v4/clients/mockclients"
-	scut "github.com/ossf/scorecard/v4/utests"
+	"github.com/ossf/scorecard/v5/checker"
+	mockrepo "github.com/ossf/scorecard/v5/clients/mockclients"
+	scut "github.com/ossf/scorecard/v5/utests"
 )
 
 func Test_isSecurityPolicyFilename(t *testing.T) {
@@ -50,7 +51,6 @@ func Test_isSecurityPolicyFilename(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			if got := isSecurityPolicyFilename(tt.filename); got != tt.expected {
@@ -63,7 +63,7 @@ func Test_isSecurityPolicyFilename(t *testing.T) {
 // TestSecurityPolicy tests the security policy.
 func TestSecurityPolicy(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name    string
 		files   []string
@@ -130,7 +130,6 @@ func TestSecurityPolicy(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
@@ -142,18 +141,14 @@ func TestSecurityPolicy(t *testing.T) {
 			// file contents once found. This test will return that
 			// mock file, but this specific unit test is not testing
 			// for content. As such, this test will crash without
-			// a mock GetFileContent, so this will return no content
+			// a mock GetFileReader, so this will return no content
 			// for the existing file. content test are in overall check
 			//
-			mockRepoClient.EXPECT().GetFileContent(gomock.Any()).DoAndReturn(func(fn string) ([]byte, error) {
+			mockRepoClient.EXPECT().GetFileReader(gomock.Any()).DoAndReturn(func(fn string) (io.ReadCloser, error) {
 				if tt.path == "" {
-					return nil, nil
+					return io.NopCloser(strings.NewReader("")), nil
 				}
-				content, err := os.ReadFile(tt.path)
-				if err != nil {
-					return content, fmt.Errorf("%w", err)
-				}
-				return content, nil
+				return os.Open(tt.path)
 			}).AnyTimes()
 
 			dl := scut.TestDetailLogger{}
@@ -165,9 +160,7 @@ func TestSecurityPolicy(t *testing.T) {
 
 			res, err := SecurityPolicy(&c)
 
-			if !scut.ValidateTestReturn(t, tt.name, &tt.want, &checker.CheckResult{}, &dl) {
-				t.Errorf("test failed: log message not present: %+v , for test %v", tt.want, tt.name)
-			}
+			scut.ValidateTestReturn(t, tt.name, &tt.want, &checker.CheckResult{}, &dl)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SecurityPolicy() error = %v, wantErr %v", err, tt.wantErr)
@@ -176,6 +169,194 @@ func TestSecurityPolicy(t *testing.T) {
 
 			if (res.PolicyFiles[0].File.Path) != (tt.files[0]) {
 				t.Errorf("test failed: the file returned is not correct: %+v", res)
+			}
+		})
+	}
+}
+
+// Test_collectPolicyHits tests the regexes in collectPolicyHits for positive and negative cases.
+func Test_collectPolicyHits(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    string
+		expected []checker.SecurityPolicyInformation
+	}{
+		// URL regex
+		{
+			name:  "URL positive",
+			input: "See https://example.com for details.",
+			expected: []checker.SecurityPolicyInformation{
+				{
+					InformationType: checker.SecurityPolicyInformationTypeLink,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "https://example.com",
+						LineNumber: 1,
+						Offset:     4,
+					},
+				},
+			},
+		},
+		{
+			name:     "URL negative",
+			input:    "No links here.",
+			expected: nil,
+		},
+		// Email regex
+		{
+			name:  "Email positive with @",
+			input: "Contact us at security@example.org.",
+			expected: []checker.SecurityPolicyInformation{
+				{
+					InformationType: checker.SecurityPolicyInformationTypeEmail,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "security@example.org",
+						LineNumber: 1,
+						Offset:     14,
+					},
+				},
+			},
+		},
+		{
+			name:  "Email positive with [at] unescaped",
+			input: "Contact us at security[at]example.org.",
+			expected: []checker.SecurityPolicyInformation{
+				{
+					InformationType: checker.SecurityPolicyInformationTypeEmail,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "security[at]example.org",
+						LineNumber: 1,
+						Offset:     14,
+					},
+				},
+			},
+		},
+		{
+			name:  "Email positive with [at] escaped",
+			input: "Contact us at security\\[at\\]example.org.",
+			expected: []checker.SecurityPolicyInformation{
+				{
+					InformationType: checker.SecurityPolicyInformationTypeEmail,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "security\\[at\\]example.org",
+						LineNumber: 1,
+						Offset:     14,
+					},
+				},
+			},
+		},
+		{
+			name:     "Email negative",
+			input:    "No email address here.",
+			expected: nil,
+		},
+		// Disclosure/vuln/number regex
+		{
+			name:  "Disclosure positive (word)",
+			input: "Please see our vulnerability disclosure policy.",
+			expected: []checker.SecurityPolicyInformation{
+				{
+					InformationType: checker.SecurityPolicyInformationTypeText,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "vuln",
+						LineNumber: 1,
+						Offset:     15,
+					},
+				},
+				{
+					InformationType: checker.SecurityPolicyInformationTypeText,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "disclos",
+						LineNumber: 1,
+						Offset:     29,
+					},
+				},
+			},
+		},
+		{
+			name:  "Disclosure positive (number)",
+			input: "Report issues to 1234.",
+			expected: []checker.SecurityPolicyInformation{
+				{
+					InformationType: checker.SecurityPolicyInformationTypeText,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "1234",
+						LineNumber: 1,
+						Offset:     17,
+					},
+				},
+			},
+		},
+		{
+			name:     "Disclosure negative",
+			input:    "No relevant keywords or numbers here.",
+			expected: nil,
+		},
+		// Multi-line input
+		{
+			name:  "Multi-line, all types",
+			input: "Contact: sec@ex.com\nPolicy: https://foo.com\nID: 42 vuln Disclos",
+			expected: []checker.SecurityPolicyInformation{
+				{
+					InformationType: checker.SecurityPolicyInformationTypeEmail,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "sec@ex.com",
+						LineNumber: 1,
+						Offset:     9,
+					},
+				},
+				{
+					InformationType: checker.SecurityPolicyInformationTypeLink,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "https://foo.com",
+						LineNumber: 2,
+						Offset:     8,
+					},
+				},
+				{
+					InformationType: checker.SecurityPolicyInformationTypeText,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "42",
+						LineNumber: 3,
+						Offset:     4,
+					},
+				},
+				{
+					InformationType: checker.SecurityPolicyInformationTypeText,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "vuln",
+						LineNumber: 3,
+						Offset:     7,
+					},
+				},
+				{
+					InformationType: checker.SecurityPolicyInformationTypeText,
+					InformationValue: checker.SecurityPolicyValueType{
+						Match:      "Disclos",
+						LineNumber: 3,
+						Offset:     12,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			hits := collectPolicyHits([]byte(tt.input))
+			if len(hits) != len(tt.expected) {
+				t.Errorf("expected %d hits, got %d: %+v", len(tt.expected), len(hits), hits)
+				return
+			}
+			for i, want := range tt.expected {
+				got := hits[i]
+				if got.InformationType != want.InformationType ||
+					got.InformationValue.Match != want.InformationValue.Match ||
+					got.InformationValue.LineNumber != want.InformationValue.LineNumber ||
+					got.InformationValue.Offset != want.InformationValue.Offset {
+					t.Errorf("hit %d: got %+v, want %+v", i, got, want)
+				}
 			}
 		})
 	}

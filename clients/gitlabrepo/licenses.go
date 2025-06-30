@@ -20,20 +20,20 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
-	"github.com/ossf/scorecard/v4/clients"
+	"github.com/ossf/scorecard/v5/clients"
 )
 
 type licensesHandler struct {
 	glProject *gitlab.Project
 	once      *sync.Once
 	errSetup  error
-	repourl   *repoURL
+	repourl   *Repo
 	licenses  []clients.License
 }
 
-func (handler *licensesHandler) init(repourl *repoURL, project *gitlab.Project) {
+func (handler *licensesHandler) init(repourl *Repo, project *gitlab.Project) {
 	handler.repourl = repourl
 	handler.glProject = project
 	handler.errSetup = nil
@@ -44,18 +44,16 @@ var errLicenseURLParse = errors.New("couldn't parse gitlab repo license url")
 
 func (handler *licensesHandler) setup() error {
 	handler.once.Do(func() {
-		licenseMap := []clients.License{}
-		if len(licenseMap) == 0 {
-			// TODO: handler.errSetup = fmt.Errorf("request for repo licenses failed with %w", err)
-			handler.errSetup = fmt.Errorf("%w: ListLicenses not yet supported for gitlab", clients.ErrUnsupportedFeature)
+		l := handler.glProject.License
+
+		// No registered license on GitLab repo, use file-based license detection instead
+		if l == nil {
 			return
 		}
 
-		l := handler.glProject.License
-
-		ptn, err := regexp.Compile(fmt.Sprintf("%s/~/blob/master/(.*)", handler.repourl.URI()))
+		ptn, err := regexp.Compile(fmt.Sprintf("%s/-/blob/(?:\\w+)/(.*)", handler.repourl.URI()))
 		if err != nil {
-			handler.errSetup = fmt.Errorf("couldn't parse License URL: %w", err)
+			handler.errSetup = fmt.Errorf("couldn't parse license url: %w", err)
 			return
 		}
 
@@ -68,9 +66,10 @@ func (handler *licensesHandler) setup() error {
 
 		handler.licenses = append(handler.licenses,
 			clients.License{
-				Key:  l.Key,
-				Name: l.Name,
-				Path: path,
+				Key:    l.Key,
+				Name:   l.Name,
+				Path:   path,
+				SPDXId: l.Key,
 			},
 		)
 

@@ -18,13 +18,13 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/google/go-github/v38/github"
+	"github.com/google/go-github/v53/github"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/clients/githubrepo/roundtripper"
-	"github.com/ossf/scorecard/v4/log"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/clients/githubrepo/roundtripper"
+	"github.com/ossf/scorecard/v5/log"
 )
 
 var _ = Describe("E2E TEST: githubrepo.releasesHandler", func() {
@@ -44,7 +44,7 @@ var _ = Describe("E2E TEST: githubrepo.releasesHandler", func() {
 	})
 	Context("getReleases()", func() {
 		It("returns releases", func() {
-			repoURL := repoURL{
+			repoURL := Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: clients.HeadSHA,

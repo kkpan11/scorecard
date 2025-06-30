@@ -20,7 +20,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/ossf/scorecard/v4/cron/data"
+	"github.com/ossf/scorecard/v5/cron/data"
 )
 
 func asPointer(i int32) *int32 {
@@ -45,7 +45,6 @@ func TestResultFilename(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			got := ResultFilename(testcase.req)

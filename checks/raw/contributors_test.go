@@ -16,11 +16,12 @@ package raw
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/mock/gomock"
 
-	"github.com/ossf/scorecard/v4/clients"
-	mockrepo "github.com/ossf/scorecard/v4/clients/mockclients"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/clients"
+	mockrepo "github.com/ossf/scorecard/v5/clients/mockclients"
 )
 
 func TestCompanyContains(t *testing.T) {
@@ -52,7 +53,6 @@ func TestCompanyContains(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			result := companyContains(tc.cs, tc.company)
@@ -92,7 +92,6 @@ func TestOrgContains(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			result := orgContains(tc.os, tc.login)
@@ -104,6 +103,7 @@ func TestOrgContains(t *testing.T) {
 }
 
 func TestContributors(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -130,8 +130,10 @@ func TestContributors(t *testing.T) {
 	}
 
 	mockRepoClient.EXPECT().ListContributors().Return(contributors, nil)
-
-	data, err := Contributors(mockRepoClient)
+	req := &checker.CheckRequest{
+		RepoClient: mockRepoClient,
+	}
+	data, err := Contributors(req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -23,7 +23,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ossf/scorecard/v4/cron/data"
+	"github.com/ossf/scorecard/v5/cron/data"
 )
 
 var repo1 = "repo1"
@@ -65,8 +65,7 @@ func TestSubscriber(t *testing.T) {
 		{
 			name:            "ReceiveFails",
 			hasErrOnReceive: true,
-			//nolint: goerr113
-			errOnReceive: errors.New("mock Receive failure"),
+			errOnReceive:    errors.New("mock Receive failure"),
 		},
 		{
 			name: "ShutdownFails",
@@ -78,12 +77,10 @@ func TestSubscriber(t *testing.T) {
 				},
 			},
 			hasErrOnShutdown: true,
-			//nolint: goerr113
-			errOnShutdown: errors.New("mock Shutdown close"),
+			errOnShutdown:    errors.New("mock Shutdown close"),
 		},
 	}
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()

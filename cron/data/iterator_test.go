@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	sce "github.com/ossf/scorecard/v4/errors"
+	sce "github.com/ossf/scorecard/v5/errors"
 )
 
 type outcome struct {
@@ -152,15 +152,15 @@ func TestCsvIterator(t *testing.T) {
 			outcomes: []outcome{
 				{
 					hasError:    true,
-					expectedErr: sce.ErrorInvalidURL,
+					expectedErr: sce.ErrInvalidURL,
 				},
 				{
 					hasError:    true,
-					expectedErr: sce.ErrorInvalidURL,
+					expectedErr: sce.ErrInvalidURL,
 				},
 				{
 					hasError:    true,
-					expectedErr: sce.ErrorInvalidURL,
+					expectedErr: sce.ErrInvalidURL,
 				},
 			},
 		},
@@ -249,7 +249,6 @@ func TestCsvIterator(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			testFile, err := os.OpenFile(testcase.filename, os.O_RDONLY, 0o644)
@@ -386,7 +385,6 @@ func TestNestedIterator(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 			var iters []Iterator

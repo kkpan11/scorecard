@@ -20,9 +20,7 @@ import (
 	"testing"
 )
 
-//nolint:tparallel,paralleltest // since t.Setenv is used
 func TestGetPrefix(t *testing.T) {
-	//nolint:govet
 	testcases := []struct {
 		name       string
 		url        string
@@ -64,7 +62,7 @@ func TestGetPrefix(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:       "non existent prefix file",
+			name:       "nonexistent prefix file",
 			url:        "testdata/getPrefix",
 			prefix:     "",
 			prefixFile: "baz",
@@ -74,7 +72,6 @@ func TestGetPrefix(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Setenv("INPUT_BUCKET_URL", testcase.url)
 			t.Setenv("INPUT_BUCKET_PREFIX", testcase.prefix)

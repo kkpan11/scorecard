@@ -22,11 +22,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ossf/scorecard/v4/checker"
-	"github.com/ossf/scorecard/v4/checks/fileparser"
-	"github.com/ossf/scorecard/v4/clients"
-	sce "github.com/ossf/scorecard/v4/errors"
-	"github.com/ossf/scorecard/v4/finding"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/checks/fileparser"
+	"github.com/ossf/scorecard/v5/clients"
+	sce "github.com/ossf/scorecard/v5/errors"
+	"github.com/ossf/scorecard/v5/finding"
 )
 
 type securityPolicyFilesWithURI struct {
@@ -199,7 +199,7 @@ func collectPolicyHits(policyContent []byte) []checker.SecurityPolicyInformation
 	// pattern for URLs
 	reURL := regexp.MustCompile(`(http|https)://[a-zA-Z0-9./?=_%:-]*`)
 	// pattern for emails
-	reEML := regexp.MustCompile(`\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b`)
+	reEML := regexp.MustCompile(`\b[A-Za-z0-9._%+-]+(@|\\?\[at\\?\])[A-Za-z0-9.-]+\.[A-Za-z]{2,6}\b`)
 	// pattern for 1 to 4 digit numbers
 	// or
 	// strings 'disclos' as in "disclosure" or 'vuln' as in "vulnerability"

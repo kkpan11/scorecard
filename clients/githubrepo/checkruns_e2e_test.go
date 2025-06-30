@@ -18,13 +18,13 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/google/go-github/v38/github"
+	"github.com/google/go-github/v53/github"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/clients/githubrepo/roundtripper"
-	"github.com/ossf/scorecard/v4/log"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/clients/githubrepo/roundtripper"
+	"github.com/ossf/scorecard/v5/log"
 )
 
 var _ = Describe("E2E TEST: githubrepo.checkrunsHandler", func() {
@@ -40,7 +40,7 @@ var _ = Describe("E2E TEST: githubrepo.checkrunsHandler", func() {
 
 	Context("E2E TEST: Validate query cost", func() {
 		It("Should not have increased query cost", func() {
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: clients.HeadSHA,
@@ -54,7 +54,7 @@ var _ = Describe("E2E TEST: githubrepo.checkrunsHandler", func() {
 	})
 	Context("E2E TEST: listCheckRunsForRef", func() {
 		It("Should return check runs for a valid ref", func() {
-			repourl := &repoURL{
+			repourl := &Repo{
 				owner:     "ossf",
 				repo:      "scorecard",
 				commitSHA: clients.HeadSHA,
@@ -75,7 +75,7 @@ var _ = Describe("E2E TEST: githubrepo.checkrunsHandler", func() {
 		})
 	})
 	It("Should return an error for an invalid ref", func() {
-		repourl := &repoURL{
+		repourl := &Repo{
 			owner:     "ossf",
 			repo:      "scorecard",
 			commitSHA: clients.HeadSHA,

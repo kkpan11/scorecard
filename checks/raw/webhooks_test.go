@@ -18,18 +18,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
-	"github.com/ossf/scorecard/v4/checker"
-	"github.com/ossf/scorecard/v4/clients"
-	mockrepo "github.com/ossf/scorecard/v4/clients/mockclients"
-	sce "github.com/ossf/scorecard/v4/errors"
-	scut "github.com/ossf/scorecard/v4/utests"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/clients"
+	mockrepo "github.com/ossf/scorecard/v5/clients/mockclients"
+	sce "github.com/ossf/scorecard/v5/errors"
+	scut "github.com/ossf/scorecard/v5/utests"
 )
 
 func TestWebhooks(t *testing.T) {
 	t.Parallel()
-	//nolint
+	//nolint:govet
 	tests := []struct {
 		name                   string
 		err                    error
@@ -90,7 +90,6 @@ func TestWebhooks(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -130,9 +129,7 @@ func TestWebhooks(t *testing.T) {
 				}
 			}
 
-			if !scut.ValidateTestReturn(t, tt.name, &tt.expected, &checker.CheckResult{}, &dl) {
-				t.Fatalf("Test %s failed", tt.name)
-			}
+			scut.ValidateTestReturn(t, tt.name, &tt.expected, &checker.CheckResult{}, &dl)
 		})
 	}
 }
